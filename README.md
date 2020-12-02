@@ -3,7 +3,7 @@
   
 ####1.1 项目来源: [Rainforest Connection Species Audio Detection](https://www.kaggle.com/c/rfcx-species-audio-detection/)
 
-####1.2 项目起始: 2020-11-23
+####1.2 项目起始: 2020-11-23，预计完成时间：2020-12-20
 
 ####1.3 项目成员： 
 - 李思颖
