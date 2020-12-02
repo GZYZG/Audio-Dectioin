@@ -1,0 +1,1 @@
+solution1的解决方案来自kaggle共享的一个解决方案。[源地址](https://www.kaggle.com/gzyyzg/inference-resnest-rfcx-audio-detection)
