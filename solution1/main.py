@@ -6,15 +6,15 @@ from pathlib import Path
 import torch
 from torch.utils.data import Dataset, DataLoader
 
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 from resnest.torch import resnest50
 
 NUM_CLASSES = 24
 SR = 16_000
 DURATION = 60
-DATA_ROOT = Path("./data")
-TRAIN_AUDIO_ROOT = Path("./data/train")
-TEST_AUDIO_ROOT = Path("./data/test")
+DATA_ROOT = Path("../data")
+TRAIN_AUDIO_ROOT = Path("../data/train")
+TEST_AUDIO_ROOT = Path("../data/test")
 
 
 class MelSpecComputer:
@@ -144,45 +144,50 @@ def get_duration(audio_name, root=TEST_AUDIO_ROOT):
     return lb.get_duration(filename=root.joinpath(audio_name).with_suffix(".flac"))
 
 
-data = pd.DataFrame({
-    "recording_id": [path.stem for path in Path(TEST_AUDIO_ROOT).glob("*.flac")],
-})
-data["species_id"] = [[] for _ in range(len(data))]
+if __name__ == "__main__":
 
-print(data.shape)
-data["duration"] = data["recording_id"].apply(get_duration)
-data.head()
-data["duration"].hist()
-ds = RFCXDataset(data=data, sr=SR, duration=10)
-x, y = ds[0]
-x.shape, y.shape
+    data = pd.DataFrame({
+        "recording_id": [path.stem for path in Path(TEST_AUDIO_ROOT).glob("*.flac")],
+    })
+    data["species_id"] = [[] for _ in range(len(data))]
 
-TEST_BATCH_SIZE = 40
-TEST_NUM_WORKERS = 2
-test_data = RFCXDataset(data=data, sr=SR)
-test_loader = DataLoader(test_data, batch_size=TEST_BATCH_SIZE, num_workers=TEST_NUM_WORKERS)
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(data.shape)
+    data["duration"] = data["recording_id"].apply(get_duration)
+    data.head()
+    data["duration"].hist()
+    ds = RFCXDataset(data=data, sr=SR, duration=10)
+    x, y = ds[0]
+    x.shape, y.shape
 
-net = resnest50(pretrained=True).to(device)
-n_features = net.fc.in_features
-net.fc = torch.nn.Linear(n_features, NUM_CLASSES)
-net = net.to(device)
-net.load_state_dict(torch.load("../input/kkiller-rfcx-species-detection-public-checkpoints/rfcx_resnest50.pth", map_location=device))
-net = net.eval()
-net
-preds = []
-net.eval()
-with torch.no_grad():
-    for (xb, yb) in  tqdm(test_loader):
-        xb, yb = xb.to(device), yb.to(device)
-        o = net(xb)
-        o = torch.sigmoid(o)
-        preds.append(o.detach().cpu().numpy())
-preds = np.vstack(preds)
-preds.shape
-sub = pd.DataFrame(preds, columns=[f"s{i}" for i in range(24)])
-sub["recording_id"] = data["recording_id"].values[:len(sub)]
-sub = sub[["recording_id"] + [f"s{i}" for i in range(24)]]
-print(sub.shape)
-sub.head()
-sub.to_csv("submission.csv", index=False)
+    TEST_BATCH_SIZE = 40
+    TEST_NUM_WORKERS = 2
+    test_data = RFCXDataset(data=data, sr=SR)
+    test_loader = DataLoader(test_data, batch_size=TEST_BATCH_SIZE, num_workers=TEST_NUM_WORKERS)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    net = resnest50(pretrained=False)
+    net.load_state_dict(torch.hub.load_state_dict_from_url(
+                "https://s3.us-west-1.wasabisys.com/resnest/torch/resnest50-528c19ca.pth", model_dir="./", progress=True, check_hash=True))
+    # net = resnest50(pretrained=True).to(device)   # 如果本地没有模型则会下载模型
+    n_features = net.fc.in_features
+    net.fc = torch.nn.Linear(n_features, NUM_CLASSES)
+    net = net.to(device)
+    net.load_state_dict(torch.load("./rfcx_resnest50.pth", map_location=device))
+    net = net.eval()
+    net
+    preds = []
+    net.eval()
+    with torch.no_grad():
+        for (xb, yb) in tqdm(test_loader):
+            xb, yb = xb.to(device), yb.to(device)
+            o = net(xb)
+            o = torch.sigmoid(o)
+            preds.append(o.detach().cpu().numpy())
+    preds = np.vstack(preds)
+    preds.shape
+    sub = pd.DataFrame(preds, columns=[f"s{i}" for i in range(24)])
+    sub["recording_id"] = data["recording_id"].values[:len(sub)]
+    sub = sub[["recording_id"] + [f"s{i}" for i in range(24)]]
+    print(sub.shape)
+    sub.head()
+    sub.to_csv("submission.csv", index=False)
