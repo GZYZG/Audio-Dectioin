@@ -6,6 +6,7 @@ import glob
 import matplotlib.pyplot as plt
 import numpy as np
 import warnings
+from utils import *
 
 warnings.filterwarnings(action="ignore")
 
@@ -59,20 +60,6 @@ def display_wave(file_path, duration=60):
     plt.show()
 
 
-def extract_data_by_time(data, sr, t_min, t_max):
-    """
-    提取指定时间段的数据
-    :param data: 音频数据
-    :param sr: 音频数据的采样频率
-    :param t_min: 起始时间
-    :param t_max: 终止时间
-    :return:
-    """
-    start = int(sr * t_min)
-    end = int(sr * t_max)
-    return start, end, data[start:end]
-
-
 def extract_data_by_id(df: pd.DataFrame, recording_id):
     return df[df["recording_id"] == recording_id]
 
@@ -121,9 +108,6 @@ def annotate_wave(file_path, annotation_info: pd.DataFrame):
     y, sr = librosa.load(file_path)
     fig, ax = plt.subplots(nrows=1, sharex=True, sharey=True)
     librosa.display.waveplot(y, sr=sr, ax=ax, alpha=0.2)
-    # D = librosa.amplitude_to_db(np.abs(librosa.stft(y)), ref=np.max)
-    # librosa.display.specshow(D, y_axis="log", x_axis="time",
-    #                          sr=sr, ax=ax)
     print(f"file: {file_path}\tnum of info pieces: {len(annotation_info)}")
     for idx in range(len(annotation_info)):
         info = annotation_info.iloc[idx]
@@ -180,8 +164,10 @@ def annotate_wave_spec(file_path, annotation_info: pd.DataFrame):
     print()
     plt.show()
 
+
 if __name__ == "__main__":
     base_dir = "../data/train/"
+    # base_dir = "../data/denoised/"
 
     train_tp = pd.read_csv("../data/train_tp.csv")
     train_tp["positive"] = [1] * len(train_tp)
@@ -189,16 +175,21 @@ if __name__ == "__main__":
     train_fp["positive"] = [0] * len(train_fp)
     train = pd.concat([train_tp, train_fp], axis=0)
     g = train.groupby("recording_id")
+
+    ext = ""
+    # 使用train中的数据
     recordings = train["recording_id"].unique()
+    ext = "flac"
+
+    # 使用经过RNNoise去噪后的数据
+    # recordings = glob.glob(base_dir + "*.wav")
+    # recordings = [e.split("\\")[-1].split(".")[0] for e in recordings]
+    # ext = "wav"
 
     for idx in range(len(recordings)):
-
-        item0 = train.iloc[idx]
-        sample = item0["recording_id"]
-        sample = base_dir + sample + ".flac"
-        t_min = item0["t_min"]
-        t_max = item0["t_max"]
-        annotate_wave_spec(sample, g.get_group(item0["recording_id"]))
+        sample = recordings[idx]
+        sample = base_dir + sample + "." + ext
+        annotate_wave_spec(sample, g.get_group(recordings[idx]))
 
     # all_flac_fs = glob.glob("../data/train/*.flac")
     samples = ['../data/train\\00ad36516.flac', '../data/train\\003b04435.flac', '../data/train\\003bec244.flac',
