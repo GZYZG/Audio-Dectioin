@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import warnings
 from utils import *
+import multiprocessing
 
 warnings.filterwarnings(action="ignore")
 
@@ -132,12 +133,40 @@ def annotate_wave_spec(file_path, annotation_info: pd.DataFrame):
     :param annotation_info: 标注信息，来源于train_fp.csv、train_tp.csv
     :return:
     """
-    y, sr = librosa.load(file_path)
-    fig, ax = plt.subplots(nrows=2, ncols=1, sharex=True, sharey=False)
-    librosa.display.waveplot(y, sr=sr, ax=ax[0], alpha=0.2)
-    D = librosa.amplitude_to_db(np.abs(librosa.stft(y)), ref=np.max)
-    librosa.display.specshow(D, y_axis="log", x_axis="time",
-                             sr=sr, ax=ax[1])
+
+    multi_col = False
+    if isinstance(file_path, str):
+        ncols = 1
+        file_path = [file_path]
+        y, sr = librosa.load(file_path[0])
+        ys = [y]
+        srs = [sr]
+    elif isinstance(file_path, list) and len(file_path) == 2:
+        ncols = 2
+        multi_col = True
+        y, sr = librosa.load(file_path[0])
+        y1, sr1 = librosa.load(file_path[1])
+        ys = [y, y1]
+        srs = [sr, sr1]
+    fig, ax = plt.subplots(nrows=2, ncols=ncols, sharex=False, sharey=True)
+
+    for c in range(ncols):
+        # 绘制波形图
+        librosa.display.waveplot(ys[c], sr=srs[c], ax=ax[0, c], alpha=1)
+        # 绘制频谱图
+        D = librosa.amplitude_to_db(np.abs(librosa.stft(ys[c])), ref=np.max)
+        librosa.display.specshow(D, y_axis="log", x_axis="time",
+                                 sr=srs[c], ax=ax[1, c])
+        ax[0, c].set(title=file_path[c])
+        ax[0, c].label_outer()
+        ax[1, c].label_outer()
+
+    # 绘制波形图
+    # librosa.display.waveplot(y, sr=sr, ax=ax[0], alpha=0.2)
+    # 绘制频谱图
+    # D = librosa.amplitude_to_db(np.abs(librosa.stft(y)), ref=np.max)
+    # librosa.display.specshow(D, y_axis="log", x_axis="time",
+    #                          sr=sr, ax=ax[1])
     print(f"file: {file_path}\tnum of info pieces: {len(annotation_info)}")
     for idx in range(len(annotation_info)):
         info = annotation_info.iloc[idx]
@@ -145,29 +174,34 @@ def annotate_wave_spec(file_path, annotation_info: pd.DataFrame):
         f_min, f_max = info["f_min"], info["f_max"]
         start, end, audio = extract_data_by_time(y, sr, t_min, t_max)
         print(f"info[{idx}]: species_id: {info['species_id']}\tstart: ({start} / {t_min}s)\tend: ({end} / {t_max}s)\t"
-              f"f_min: {f_min}Hz  f_max: {f_max}Hz")
-        color = "g" if info["positive"] == 1 else "r"
-        ax[0].plot(np.linspace(t_min, t_max, len(audio)), np.array(audio), color=color, alpha=.5)
-        ax[0].text(t_min, 0.1, info["species_id"], color="k")
-        ax[0].axvline(t_min, color=color)
-        ax[0].axvline(t_max, color=color)
+              f"f_min: {f_min}Hz  f_max: {f_max}Hz\naudio data: {audio}")
 
-        color = "g" if info["positive"] == 1 else "b"
-        ax[1].text(t_min, (f_max+f_min)/2, info["species_id"], color="white")
-        ax[1].axvline(t_min, color=color)
-        ax[1].axvline(t_max, color=color)
-        ax[1].add_patch(plt.Rectangle(xy=(t_min, f_min),width=t_max - t_min, height=f_max - f_min,
-                                      color=color, fill=False, linewidth=2))
-    ax[0].set(title=file_path)
-    ax[0].label_outer()
-    ax[1].label_outer()
+        for i in range(ncols):
+            nth = (0, i)
+
+            color = "g" if info["positive"] == 1 else "r"
+            ax[nth].plot(np.linspace(t_min, t_max, len(audio)), np.array(audio), color=color, alpha=.5)
+            ax[nth].text(t_min, 0.1, info["species_id"], color="k")
+            ax[nth].axvline(t_min, color=color)
+            ax[nth].axvline(t_max, color=color)
+
+            nth = (1, i)
+            color = "g" if info["positive"] == 1 else "b"
+            ax[nth].text(t_min, (f_max+f_min)/2, info["species_id"], color="white")
+            ax[nth].axvline(t_min, color=color)
+            ax[nth].axvline(t_max, color=color)
+            ax[nth].add_patch(plt.Rectangle(xy=(t_min, f_min),width=t_max - t_min, height=f_max - f_min,
+                                          color=color, fill=False, linewidth=2))
+    # ax[0].set(title=file_path)
+    # ax[0].label_outer()
+    # ax[1].label_outer()
     print()
     plt.show()
 
 
 if __name__ == "__main__":
-    base_dir = "../data/train/"
-    # base_dir = "../data/denoised/"
+    # base_dir = "../data/train/"
+    base_dir = "../data/denoised/"
 
     train_tp = pd.read_csv("../data/train_tp.csv")
     train_tp["positive"] = [1] * len(train_tp)
@@ -178,29 +212,30 @@ if __name__ == "__main__":
 
     ext = ""
     # 使用train中的数据
-    recordings = train["recording_id"].unique()
-    ext = "flac"
-
+    # recordings = train["recording_id"].unique()
+    # ext = "flac"
+    #
     # 使用经过RNNoise去噪后的数据
-    # recordings = glob.glob(base_dir + "*.wav")
-    # recordings = [e.split("\\")[-1].split(".")[0] for e in recordings]
-    # ext = "wav"
+    recordings = glob.glob(base_dir + "*.wav")
+    recordings = [e.split("\\")[-1].split(".")[0] for e in recordings]
+    ext = "wav"
 
     for idx in range(len(recordings)):
-        sample = recordings[idx]
-        sample = base_dir + sample + "." + ext
-        annotate_wave_spec(sample, g.get_group(recordings[idx]))
+        record = recordings[idx]
+        sample = base_dir + record + "." + ext
+        annotate_wave_spec([sample, "../data/train/"+record+".flac"], g.get_group(recordings[idx]))
+        # annotate_wave_spec("../data/train/"+record+".flac", g.get_group(recordings[idx]))
 
     # all_flac_fs = glob.glob("../data/train/*.flac")
-    samples = ['../data/train\\00ad36516.flac', '../data/train\\003b04435.flac', '../data/train\\003bec244.flac',
-               '../data/train\\005f1f9a5.flac', '../data/train\\006ab765f.flac', '../data/train\\0072f0839.flac',
-               ]  # all_flac_fs[:20]
-
-
-    print(samples)
+    # samples = ['../data/train\\00ad36516.flac', '../data/train\\003b04435.flac', '../data/train\\003bec244.flac',
+    #            '../data/train\\005f1f9a5.flac', '../data/train\\006ab765f.flac', '../data/train\\0072f0839.flac',
+    #            ]  # all_flac_fs[:20]
+    #
+    #
+    # print(samples)
     # display_specshow([samples[0], "s0_ns.wav"])
-
-    duration = 60
+    #
+    # duration = 60
     # display_wave([samples[0], "s0_ns.wav"], duration=duration)
 
 
