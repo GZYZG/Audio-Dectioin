@@ -4,6 +4,7 @@ import numpy as np
 import librosa
 import glob
 import random
+from vggish import vggish_input
 
 """
 for f in fl:
@@ -134,17 +135,59 @@ def extract_noise_data(audio_num=50):
     sf.write("./noise.wav", noise_data, sr, subtype="PCM_16")
 
 
+def statistic():
+    """
+    统计每个物种所对应的音频记录
+    :return:
+    """
+    train_tp = pd.read_csv("../data/train_tp.csv")
+    train_tp["positive"] = [1] * len(train_tp)
+    train_fp = pd.read_csv("../data/train_fp.csv")
+    train_fp["positive"] = [0] * len(train_fp)
+    train = pd.concat([train_tp, train_fp], axis=0)
+    train["duration"] = train["t_max"] - train["t_min"]
+
+    # 按照物种对音频数据进行分类
+    species_dir = "../data/species/"
+    g = train.groupby("species_id")
+    for k, v in g:
+        v.to_csv(species_dir+str(k)+".csv", index=False)
+        print(f"total num: {len(v)}\tpositive num: {len(v[v['positive']==1])}\tfalse num: {len(v[v['positive']==0])}")
+
+
+def vggish_melspectrogram(file):
+    """
+    使用vggish来提取mel spectrogram，使用的是对数形式的mel spectrogram，参数可以参考 vggish_params.py文件
+    :param file:
+    :return: 每0.96s 为一帧数据，一帧数据为2-D形状的数据
+    """
+    example = vggish_input.wavfile_to_examples(file)
+    return example
+
+
+def vggish_log_melspectrogram(file):
+    return vggish_input.wavefile_to_log_melspectrogram(file)
+
+
 if __name__ == "__main__":
+    data = vggish_log_melspectrogram("../data/train/00ad36516.flac")
+    print(data.shape)
+    print(data)
+
+    # statistic()
+
     # extract_species_data()
 
     # extract_noise_data()
 
-    base_dir = "../data/train/"
-    fl = glob.glob(base_dir+"*.flac")[:100]
-    for file in fl:
-        fn = file.split("\\")[-1].split(".")[0]+".wav"
-        flac_to_wav(file, "../data/wav/"+fn)
-        print(f"{file} convert finished")
+    # 将.flac文件转换为.wav文件
+    # base_dir = "../data/train/"
+    # fl = glob.glob(base_dir+"*.flac")[:100]
+    # for file in fl:
+    #     fn = file.split("\\")[-1].split(".")[0]+".wav"
+    #     flac_to_wav(file, "../data/wav/"+fn)
+    #     print(f"{file} convert finished")
+
 
     # SPECIES_NUM = 24
     # base_dir = "../data/train/"

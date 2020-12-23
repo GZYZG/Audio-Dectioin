@@ -34,7 +34,6 @@ class MelSpecComputer:
         return melspec
 
 
-
 def mono_to_color(X, eps=1e-6, mean=None, std=None):
     X = np.stack([X, X, X], axis=-1)
 
@@ -134,7 +133,7 @@ class RFCXDataset(Dataset):
         y, t = self.read_index(idx)
 
         melspec = self.mel_spec_computer(y)
-        image = mono_to_color(melspec)
+        image = mono_to_color(melspec)  # 将单通道的melspec转化为3通道的彩色image
         image = normalize(image, mean=None, std=None)
 
         return image, t
