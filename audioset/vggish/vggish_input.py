@@ -37,7 +37,8 @@ except ImportError:
 
 def waveform_to_examples(data, sample_rate):
     """Converts audio waveform into an array of examples for VGGish.
-
+    每一段音频被转化成一个3-D数组，形状为[num_examples, num_frames, num_bands]，
+    每一个example表示一个时长为960ms的mel spectrogram，每个mel spectrogram的一行表示一帧，一帧的时长为 960ms / 帧数，num_bands表示分成多少个频段
   Args:
     data: np.array of either one dimension (mono) or two dimensions
       (multi-channel, with the outer dimension representing channels).
@@ -96,6 +97,7 @@ def wavfile_to_examples(wav_file):
     assert wav_data.dtype == np.int16, 'Bad sample type: %r' % wav_data.dtype
     samples = wav_data / 32768.0  # Convert to [-1.0, +1.0]
     return waveform_to_examples(samples, sr)
+
 
 def wavefile_to_log_melspectrogram(wav_file):
     wav_data, sample_rate = wav_read(wav_file)

@@ -2,9 +2,12 @@ import soundfile as sf
 import pandas as pd
 import numpy as np
 import librosa
+import librosa.display
 import glob
 import random
 from vggish import vggish_input
+import matplotlib.pyplot as plt
+import resampy
 
 """
 for f in fl:
@@ -145,7 +148,10 @@ def statistic():
     train_fp = pd.read_csv("../data/train_fp.csv")
     train_fp["positive"] = [0] * len(train_fp)
     train = pd.concat([train_tp, train_fp], axis=0)
+    train.to_csv("train_all.csv", index=False)
     train["duration"] = train["t_max"] - train["t_min"]
+    print(f"max f: {train['f_max'].max()}\tmin f: {train['f_min'].min()}"
+          f"\tmean f: {train['f_min'].mean()/2+train['f_max'].mean()/2}")
 
     # 按照物种对音频数据进行分类
     species_dir = "../data/species/"
@@ -155,7 +161,7 @@ def statistic():
         print(f"total num: {len(v)}\tpositive num: {len(v[v['positive']==1])}\tfalse num: {len(v[v['positive']==0])}")
 
 
-def vggish_melspectrogram(file):
+def vggish_example(file):
     """
     使用vggish来提取mel spectrogram，使用的是对数形式的mel spectrogram，参数可以参考 vggish_params.py文件
     :param file:
@@ -165,16 +171,23 @@ def vggish_melspectrogram(file):
     return example
 
 
-def vggish_log_melspectrogram(file):
+def vggish_melspectrogram(file):
+    """"
+    读取音频文件并转化为mel spectrogram。注意：会对音频数据进行重采样为16kHz；返回的是一个2—D的数组，每一行表示一帧表示25ms长的音频
+    """
     return vggish_input.wavefile_to_log_melspectrogram(file)
 
 
 if __name__ == "__main__":
-    data = vggish_log_melspectrogram("../data/train/00ad36516.flac")
-    print(data.shape)
-    print(data)
+    # data = vggish_melspectrogram("../data/train/0a4f02024.flac")
+    # data = np.transpose(data)
+    # print(data.shape)
+    # print(data)
+    # fig, ax = plt.subplots(nrows=1, ncols=1, sharex=True, sharey=True)
+    # librosa.display.specshow(data, y_axis="log", x_axis="time", sr=16000, ax=ax)
+    # plt.show()
 
-    # statistic()
+    statistic()
 
     # extract_species_data()
 

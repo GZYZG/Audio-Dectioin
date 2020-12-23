@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import warnings
 from utils import *
-import multiprocessing
+import resampy
+import vggish_params
 
 warnings.filterwarnings(action="ignore")
 
@@ -29,19 +30,21 @@ def display_specshow(file_path, y_axis="log", x_axis="time", spec=["normal", "me
 
     def mel(data, samplerate):
         tmp = librosa.feature.melspectrogram(y=data, sr=samplerate, n_mels=128)
-        return librosa.power_to_db(tmp, ref=np.max)
+        return librosa.amplitude_to_db(tmp, ref=np.max)
 
     fig, ax = plt.subplots(nrows=len(spec), ncols=len(file_path), sharex=True, sharey=True)
     ax = np.reshape(ax, (len(spec), len(file_path)))
 
     for idx, file in enumerate(file_path):
         y, sr = librosa.load(file)
+        y = resampy.resample(y, sr, vggish_params.SAMPLE_RATE)
         for jdx, sp in enumerate(spec):
             D = normal(y) if sp == "normal" else mel(y, sr)
             img = librosa.display.specshow(D, y_axis=y_axis, x_axis=x_axis,
                                            sr=sr, ax=ax[jdx][idx])
             ax[jdx][idx].label_outer()
             ax[jdx][idx].set_xlabel(sp)
+            print(f"{sp}: {D.shape}")
         ax[0][idx].set(title=file)
     fig.colorbar(img, ax=ax, format="%+2.f dB")
     plt.show()
