@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[ ]:
-
-
 from keras.models import model_from_json
 import json
 import os
@@ -15,11 +9,8 @@ import librosa.display
 import pandas as pd
 # ### Specify the directory for test recordings, the path to the stored model, and the output file path/name
 
-# In[23]:
-
-
 # Recording directory
-recording_dir = './data/test_recordings/'
+recording_dir = '../data/test/'
 
 # CNN model
 model_path = './ResNet50_test'
@@ -30,17 +21,10 @@ output_path = './prediction_output.csv'
 
 # ### Run remaining cells to generate prediction CSV
 
-# In[24]:
-
-
 # CNN input sample rate
 model_sample_rate = 48000
 
-test_recordings = os.listdir(recording_dir)
-
-
-# In[1]:
-
+uris = test_recordings = os.listdir(recording_dir)
 
 # Load CNN model
 
@@ -56,21 +40,10 @@ model_input_shape = model.get_layer(index=0).input_shape[1:]
 n_classes = model.get_layer(index=-1).output_shape[1:][0]
 
 
-# In[27]:
-
-
-model_input_shape
-
-
-# In[28]:
-
+print(model_input_shape)
 
 from keras.preprocessing.image import ImageDataGenerator
 test_datagen = ImageDataGenerator(rescale=1./255)
-
-
-# In[29]:
-
 
 def fig2data ( fig ):
     """
@@ -88,12 +61,7 @@ def fig2data ( fig ):
     
     return buf
 
-
-# In[31]:
-
-
 ### Run detections
-
 pixLen = 188  # 188 spectrogram pixels is ~2 seconds
 shft = 93 # %50 overlap between 188-length windows
 
@@ -140,23 +108,8 @@ for n, j in enumerate(test_recordings):  # loop over recordings
         prediction[j, i] = max(p[:,i]) # Max-probability across 2s windows
 #         prediction[j, i, 1] = np.mean(np.sort(p[:,i])[-2:]) # Mean probability of top 2 windows
 
-        
-            
-            
-
-
-# In[1]:
-
-
 # Make dataframe of predictions
 prediction = pd.DataFrame(prediction[:,:,0])
 prediction.index = test_recordings
 prediction.columns = [class_dict[str(i)][0] for i in range(n_classes)]
 prediction.to_csv(output_path)
-
-
-# In[ ]:
-
-
-
-

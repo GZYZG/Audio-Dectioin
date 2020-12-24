@@ -246,10 +246,10 @@ if __name__ == "__main__":
     #
     #
     # print(samples)
-    display_specshow(samples[0])
+    # display_specshow(samples[0])
     #
-    # duration = 60
-    # display_wave([samples[0], "s0_ns.wav"], duration=duration)
+    duration = 60
+    display_wave([samples[0]], duration=duration)
 
 
 
