@@ -2,6 +2,7 @@
 将每个音频转化为一个频谱图，直接用于多标签分类
 """
 import librosa
+import librosa.display
 import matplotlib.pyplot as pyplot
 import pandas as pd
 import os
@@ -18,7 +19,8 @@ def preprocess():
 def convert(train: pd.DataFrame):
     recording_dir = "../data/train/"
     save_dir = "./data/spectrograms/"
-    if os.path.exists(save_dir):
+    sampling_rate = 48000
+    if not os.path.exists(save_dir):
         os.mkdir(save_dir)
     # recordings = train['recording_id'].unique().tolist()
     g = train.groupby("recording_id")
@@ -28,7 +30,8 @@ def convert(train: pd.DataFrame):
         audio_file_path = recording_dir + record + ".flac"  # 音频文件路径
         audio_data, sampling_rate = librosa.load(audio_file_path, sr=sampling_rate)
         if os.path.exists(save_dir + filename):
-            print(f"{save_dir + filename} already exists, skip generating it ... {i} / {len(group)}")
+            print(f"{save_dir + filename} already exists, skip generating it ... {i} / {len(g)}")
+            i += 1
             continue
 
         S = librosa.feature.melspectrogram(
@@ -46,7 +49,8 @@ def convert(train: pd.DataFrame):
         pyplot.savefig(save_dir + filename, bbox_inches='tight',
                        transparent=True, pad_inches=0.0)
         pyplot.close()
-        print(f"generating {save_dir + filename} finished ... {i} / {len(group)}")
+        print(f"generating {save_dir + filename} finished ... {i+1} / {len(g)}")
+        i += 1
 
 
 def gen_target(train: pd.DataFrame):
@@ -65,10 +69,14 @@ def gen_target(train: pd.DataFrame):
 
         targets.append(tar)
 
+    df = pd.DataFrame()
+
+
     return targets
 
 
 if __name__ == "__main__":
-
-
-    df_train = pd.concat([pd.DataFrame({'filename': files}), pd.DataFrame(np.asarray(target))], axis=1)
+    train = preprocess()
+    # convert(train)
+    targets = gen_target(train)
+    print(targets)

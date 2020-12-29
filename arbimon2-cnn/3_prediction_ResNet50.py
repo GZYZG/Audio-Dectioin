@@ -75,9 +75,9 @@ def divide_frames(im, w, s):
         yield im[:, i:i + w] 
 
 
-for n, j in enumerate(test_recordings):  # loop over recordings
+for n, j in enumerate(test_recordings[:100]):  # loop over recordings
             
-    print('Processing recording ' + str(j+1) + '/' + str(len(test_recordings)) + ' - ' + uris[j])
+    print('Processing recording ' + str(n+1) + '/' + str(len(test_recordings)) + ' - ' + uris[n])
     
     audio_data, sampling_rate = librosa.load(recording_dir+j, sr=model_sample_rate)
     
@@ -105,11 +105,11 @@ for n, j in enumerate(test_recordings):  # loop over recordings
     p = model.predict(X)
             
     for i in range(n_classes):
-        prediction[j, i] = max(p[:,i]) # Max-probability across 2s windows
+        prediction[n, i] = max(p[:,i]) # Max-probability across 2s windows
 #         prediction[j, i, 1] = np.mean(np.sort(p[:,i])[-2:]) # Mean probability of top 2 windows
 
 # Make dataframe of predictions
-prediction = pd.DataFrame(prediction[:,:,0])
+prediction = pd.DataFrame(prediction[:,:])
 prediction.index = test_recordings
 prediction.columns = [class_dict[str(i)][0] for i in range(n_classes)]
 prediction.to_csv(output_path)
