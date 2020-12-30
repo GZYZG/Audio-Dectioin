@@ -121,3 +121,26 @@ def wavefile_to_log_melspectrogram(wav_file):
         upper_edge_hertz=vggish_params.MEL_MAX_HZ)
 
     return log_mel
+
+
+def wavedata_to_log_melspectrogram(wav_data, sample_rate):
+    assert wav_data.dtype == np.int16, 'Bad sample type: %r' % wav_data.dtype
+    data = wav_data / 32768.0  # Convert to [-1.0, +1.0]
+    if len(data.shape) > 1:
+        data = np.mean(data, axis=1)
+    # Resample to the rate assumed by VGGish.
+    if sample_rate != vggish_params.SAMPLE_RATE:
+        data = resampy.resample(data, sample_rate, vggish_params.SAMPLE_RATE)
+
+    # Compute log mel spectrogram features.
+    log_mel = mel_features.log_mel_spectrogram(
+        data,
+        audio_sample_rate=vggish_params.SAMPLE_RATE,
+        log_offset=vggish_params.LOG_OFFSET,
+        window_length_secs=vggish_params.STFT_WINDOW_LENGTH_SECONDS,
+        hop_length_secs=vggish_params.STFT_HOP_LENGTH_SECONDS,
+        num_mel_bins=vggish_params.NUM_MEL_BINS,
+        lower_edge_hertz=vggish_params.MEL_MIN_HZ,
+        upper_edge_hertz=vggish_params.MEL_MAX_HZ)
+
+    return log_mel

@@ -178,16 +178,20 @@ def vggish_melspectrogram(file):
     return vggish_input.wavefile_to_log_melspectrogram(file)
 
 
-if __name__ == "__main__":
-    # data = vggish_melspectrogram("../data/train/0a4f02024.flac")
-    # data = np.transpose(data)
-    # print(data.shape)
-    # print(data)
-    # fig, ax = plt.subplots(nrows=1, ncols=1, sharex=True, sharey=True)
-    # librosa.display.specshow(data, y_axis="log", x_axis="time", sr=16000, ax=ax)
-    # plt.show()
+def vggish_wave_data_mel(data, sr):
+    return vggish_input.wavedata_to_log_melspectrogram(data, sr)
 
-    statistic()
+if __name__ == "__main__":
+    data = vggish_example("../data/train/0a33527e9.flac")
+    data = vggish_melspectrogram("../data/train/0a4f02024.flac")
+    data = np.transpose(data)
+    print(data.shape)
+    print(data)
+    fig, ax = plt.subplots(nrows=1, ncols=1, sharex=True, sharey=True)
+    librosa.display.specshow(data, y_axis="log", x_axis="time", sr=16000, ax=ax)
+    plt.show()
+
+    # statistic()
 
     # extract_species_data()
 

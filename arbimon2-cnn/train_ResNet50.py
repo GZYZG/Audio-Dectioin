@@ -8,7 +8,7 @@ import keras
 from keras import backend as K
 from keras.models import model_from_json
 from keras.preprocessing.image import ImageDataGenerator
-from keras.applications import ResNet50
+from keras.applications import ResNet50, ResNet101V2
 import keras.models as models
 import keras.layers as layers
 import tensorflow as tf
@@ -122,6 +122,7 @@ def masked_loss(y_true, y_pred):
 
 
 #Load the ResNet50 model
+# ResNest =
 ResNet50_conv = ResNet50(weights='imagenet', 
                          include_top=False, 
                          input_shape=input_shape)

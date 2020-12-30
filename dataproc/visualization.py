@@ -2,7 +2,7 @@ import librosa
 import librosa.display
 import pandas as pd
 import soundfile as sf
-import glob
+import glob, os
 import matplotlib.pyplot as plt
 import numpy as np
 import warnings
@@ -237,19 +237,25 @@ def compare_raw_denoised():
 
 
 if __name__ == "__main__":
-    # base_dir = "../data/train/"
+    # base_dir = "../data/train/
 
-    # all_flac_fs = glob.glob("../data/train/*.flac")
+    train = pd.read_csv("../data/train_all.csv")
+    gs = train.groupby("recording_id")
+
+    all_flac_fs = os.listdir("../data/train/")
     samples = ['../data/train\\00ad36516.flac', '../data/train\\003b04435.flac', '../data/train\\003bec244.flac',
                '../data/train\\005f1f9a5.flac', '../data/train\\006ab765f.flac', '../data/train\\0072f0839.flac',
                ]  # all_flac_fs[:20]
+    file = all_flac_fs[7]
+    record = file.split(".")[0]
+    annotate_spec(os.path.join("../data/train/", file), gs.get_group(record))
     #
     #
     # print(samples)
     # display_specshow(samples[0])
-    #
-    duration = 60
-    display_wave([samples[0]], duration=duration)
+
+    # duration = 60
+    # display_wave([samples[3]], duration=duration)
 
 
 
