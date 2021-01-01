@@ -276,6 +276,7 @@ def wave_animation(file_path):
 
 def bar_animation():
     def animate(frame):
+
         for bar in bars:
             bar.set_height(np.random.standard_normal())
         return bars,
@@ -284,22 +285,47 @@ def bar_animation():
     x = list(range(0,25))
     y = np.random.standard_normal(len(x))
     bars = ax.bar(x, y, .5)
+
     ani = animation.FuncAnimation(fig, animate, 100, interval=100, blit=False, repeat=True)
 
     plt.show()
 
 
-def animate_real_time_pred(wave_data, preds, labels):
+def animate_real_time_pred(wave_data, sr, preds, labels):
+    def animate(frame):
+        vline.set_data([frame / sr] * 2, [-1, 1])
+        for bar in bars:
+            bar.set_height(np.random.standard_normal())
+
+        return bars,vline,
+
+    fig, ax = plt.subplots(ncols=1, nrows=2)
+    librosa.display.waveplot(wave_data, sr=sr, ax=ax[0], alpha=1)
+    vline = ax[0].plot([0, 0], [-abs(wave_data[0]), abs(wave_data[0])], color="r", lw=.5)[0]
+    x = list(range(25))
+    y_init = [0] * len(x)
+    y_init[-1] = 1
+
+    bars = ax[1].bar(x, y_init, .5)
+    ax[1].set_xticks(x)
+    ax[1].set_ylim(-1,1)
+    interval = 100
+    ani = animation.FuncAnimation(fig, animate, frames=np.arange(0, len(wave_data), int(sr*interval/1000)), interval=interval, blit=False, repeat=True)
+
+    plt.show()
 
     pass
+
 
 if __name__ == "__main__":
     # 使用matplotlib展示动画
     # annimation_test()
     # 以动画的形式展示声波
     file_path = "../data/train/003bec244.flac"
+    wave_data, sr = librosa.load(file_path)
+    animate_real_time_pred(wave_data, sr, [], [])
     # wave_animation(file_path)
-    bar_animation()
+    # bar_animation()
 
     # base_dir = "../data/train/
 
