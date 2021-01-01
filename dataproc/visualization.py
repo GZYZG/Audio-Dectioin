@@ -4,6 +4,7 @@ import pandas as pd
 import soundfile as sf
 import glob, os
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 import numpy as np
 import warnings
 from utils import *
@@ -236,19 +237,82 @@ def compare_raw_denoised():
         annotate_wave_spec([sample, "../data/train/" + record + ".flac"], g.get_group(recordings[idx]))
 
 
+def annimation_test():
+    def update_points(num):
+        '''
+        更新数据点
+        '''
+        point_ani.set_data(x[num], y[num])
+        return point_ani,
+    x = np.linspace(0, 2 * np.pi, 100)
+    y = np.sin(x)
+
+    fig, ax = plt.subplots(tight_layout=True)
+    ax.plot(x, y)
+    ax.grid(ls="--")
+    point_ani, = ax.plot(x[0], y[0], "ro")
+    ani = animation.FuncAnimation(fig, update_points, np.arange(0, 100), interval=60, blit=True)
+    plt.show()
+    ani.save('sin_test2.gif', writer='imagemagick', fps=10)
+    pass
+
+
+def wave_animation(file_path):
+    def update(idx):
+        print(y[idx])
+        vline.set_data([idx/sr]*2, [-1, 1])
+        # vline.set_linewidth(np.random.standard_normal())
+        return vline,
+    y, sr = librosa.load(file_path)
+    fig, ax = plt.subplots(nrows=1, sharex=True, sharey=True)
+    librosa.display.waveplot(y, sr=sr, ax=ax, alpha=1)
+    ax.grid(ls="--")
+    vline = ax.plot([0,0], [-abs(y[0]), abs(y[0])], color="r", lw=.5)[0]
+    interval = 100
+    ani = animation.FuncAnimation(fig, update, np.arange(0, len(y), int(sr*interval/1000)), interval=100, blit=True)
+    # ani.save('sin_test2.gif', writer='pillow', fps=10)
+    plt.show()
+
+
+def bar_animation():
+    def animate(frame):
+        for bar in bars:
+            bar.set_height(np.random.standard_normal())
+        return bars,
+
+    fig, ax = plt.subplots()
+    x = list(range(0,25))
+    y = np.random.standard_normal(len(x))
+    bars = ax.bar(x, y, .5)
+    ani = animation.FuncAnimation(fig, animate, 100, interval=100, blit=False, repeat=True)
+
+    plt.show()
+
+
+def animate_real_time_pred(wave_data, preds, labels):
+
+    pass
+
 if __name__ == "__main__":
+    # 使用matplotlib展示动画
+    # annimation_test()
+    # 以动画的形式展示声波
+    file_path = "../data/train/003bec244.flac"
+    # wave_animation(file_path)
+    bar_animation()
+
     # base_dir = "../data/train/
 
-    train = pd.read_csv("../data/train_all.csv")
-    gs = train.groupby("recording_id")
-
-    all_flac_fs = os.listdir("../data/train/")
-    samples = ['../data/train\\00ad36516.flac', '../data/train\\003b04435.flac', '../data/train\\003bec244.flac',
-               '../data/train\\005f1f9a5.flac', '../data/train\\006ab765f.flac', '../data/train\\0072f0839.flac',
-               ]  # all_flac_fs[:20]
-    file = all_flac_fs[7]
-    record = file.split(".")[0]
-    annotate_spec(os.path.join("../data/train/", file), gs.get_group(record))
+    # train = pd.read_csv("../data/train_all.csv")
+    # gs = train.groupby("recording_id")
+    #
+    # all_flac_fs = os.listdir("../data/train/")
+    # samples = ['../data/train\\00ad36516.flac', '../data/train\\003b04435.flac', '../data/train\\003bec244.flac',
+    #            '../data/train\\005f1f9a5.flac', '../data/train\\006ab765f.flac', '../data/train\\0072f0839.flac',
+    #            ]  # all_flac_fs[:20]
+    # file = all_flac_fs[7]
+    # record = file.split(".")[0]
+    # annotate_spec(os.path.join("../data/train/", file), gs.get_group(record))
     #
     #
     # print(samples)

@@ -152,7 +152,7 @@ def statistic():
     train["duration"] = train["t_max"] - train["t_min"]
     print(f"max f: {train['f_max'].max()}\tmin f: {train['f_min'].min()}"
           f"\tmean f: {train['f_min'].mean()/2+train['f_max'].mean()/2}")
-
+    
     # 按照物种对音频数据进行分类
     species_dir = "../data/species/"
     g = train.groupby("species_id")

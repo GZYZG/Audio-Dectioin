@@ -73,6 +73,7 @@ def LRAP(preds, labels):
     score = (scores.sum(-1) / labels.sum(-1)).mean()
     return score.item()
 
+
 class LRAP_loss(nn.Module):
     def __init__(self):
         super(LRAP_loss, self).__init__()
@@ -150,6 +151,10 @@ class AudioDataSet(Data.Dataset):
         item = item % self.audio_file_list.__len__()
         audio = self.audio_file_list[item]
         data = vggish_melspectrogram(os.path.join(self.root, audio))
+        idxs = range(data.shape[0])
+        idxs = random.sample(idxs, 3000)
+        idxs.sort()
+        data = data[idxs]
         label = np.zeros(self.num_class)
         group = self.groups.get_group(audio[:-5])
         for idx in range(len(group)):
@@ -246,7 +251,7 @@ def main():
 def train_audio():
     root = "../data/train/"
     data_info = "../data/train_all.csv"
-    batch_size = 8
+    batch_size = 2
     epoches = 3
     dataset = AudioDataSet(root, data_info, num_class=24, repeat=10)
     loader = Data.DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True, num_workers=0)
@@ -255,17 +260,19 @@ def train_audio():
 
     lstm = LSTM_RNN(input_size=128, hidden_size=64, num_layers=2, num_class=24)
     optimizer = torch.optim.Adam(lstm.parameters(), lr=learning_rate)
-    loss_function = LRAP_loss()  # nn.MultiLabelSoftMarginLoss()  # LRAP
+    loss_function = nn.MultiLabelSoftMarginLoss()  # LRAP
 
     for epoch in range(epoches):
         for idx, (bth_x, bth_y) in enumerate(loader):
-            print(f"{idx} / {epoch}")
+            # print(f"{idx} / {epoch}")
             # print(bth_x)
             # print(bth_y)
             output = lstm(bth_x)
             loss = loss_function(output, bth_y)
             optimizer.zero_grad()
             loss.backward()
+
+            print('Epoch: ', epoch, ' - ', idx, '| train loss: %.4f' % loss.data.numpy())
 
             optimizer.step()
 
@@ -278,7 +285,50 @@ def train_audio():
                 print('Epoch: ', epoch, '| train loss: %.4f' % train_loss, '| test loss: %.2f' % loss.data.numpy())
 
 
+def _one_sample_positive_class_precisions(scores, truth):
+    num_classes = scores.shape[0]
+    pos_class_indices = np.flatnonzero(truth > 0)
+
+    if not len(pos_class_indices):
+        return pos_class_indices, np.zeros(0)
+
+    retrieved_classes = np.argsort(scores)[::-1]
+
+    class_rankings = np.zeros(num_classes, dtype=np.int)
+    class_rankings[retrieved_classes] = range(num_classes)
+
+    retrieved_class_true = np.zeros(num_classes, dtype=np.bool)
+    retrieved_class_true[class_rankings[pos_class_indices]] = True
+
+    retrieved_cumulative_hits = np.cumsum(retrieved_class_true)
+
+    precision_at_hits = (
+            retrieved_cumulative_hits[class_rankings[pos_class_indices]] /
+            (1 + class_rankings[pos_class_indices].astype(np.float)))
+    return pos_class_indices, precision_at_hits
+
+
+def lwlrap(truth, scores):
+    assert truth.shape == scores.shape
+    num_samples, num_classes = scores.shape
+    precisions_for_samples_by_classes = np.zeros((num_samples, num_classes))
+    for sample_num in range(num_samples):
+        pos_class_indices, precision_at_hits = _one_sample_positive_class_precisions(scores[sample_num, :], truth[sample_num, :])
+        precisions_for_samples_by_classes[sample_num, pos_class_indices] = precision_at_hits
+
+    labels_per_class = np.sum(truth > 0, axis=0)
+    weight_per_class = labels_per_class / float(np.sum(labels_per_class))
+
+    per_class_lwlrap = (np.sum(precisions_for_samples_by_classes, axis=0) /
+                        np.maximum(1, labels_per_class))
+    return per_class_lwlrap, weight_per_class
+
+
 if __name__ == "__main__":
     # main()
     # test_AudioDataSet()
-    train_audio()
+    # train_audio()
+    #
+    y_true = torch.tensor(np.array([[1, 1, 0], [1, 0, 1], [0, 0, 1]]))
+    y_score = torch.tensor(np.random.randn(3, 3))
+    print(LRAP(y_score, y_true), LWLRAP(y_score, y_true))
