@@ -291,27 +291,66 @@ def bar_animation():
     plt.show()
 
 
-def animate_real_time_pred(wave_data, sr, preds, labels):
+def split(right=60):
+    left = 0
+    # right = 60
+    frame_length = 0.025
+    piece_length = frame_length * 8
+    stride = 0.1
+    ends = []
+    while True:
+            s = left
+            end = int(sr * (s+piece_length))
+            left += stride
+            ends.append(end)
+            if s+piece_length > right:
+                break
+    return ends
+
+
+def animate_real_time_pred(wave_data, sr, preds, labels, save_pth="realtime.gif"):
     def animate(frame):
-        vline.set_data([frame / sr] * 2, [-1, 1])
-        for bar in bars:
-            bar.set_height(np.random.standard_normal())
+        vline.set_data([ends[frame] / sr] * 2, [-2, 2])
+        # appear = (preds[frame] == 1)
+        for idx, bar in enumerate(bars):
+            bar.set_height(preds[frame][idx])
+            if preds[frame][idx] >= 0:
+                bar.set_color('g')
+            else:
+                bar.set_color('r')
 
-        return bars,vline,
+        for idx, bar in enumerate(t_bars):
+            bar.set_height(labels[frame][idx])
+            if labels[frame][idx] >= 0:
+                bar.set_color('g')
+            else:
+                bar.set_color('r')
 
-    fig, ax = plt.subplots(ncols=1, nrows=2)
+        # for e in appear:
+        #     if e != 24:
+        #         ax[1].text(e, 0.5, f"{e}", color="k", size="large")
+
+        return bars,vline,t_bars,
+    # print(preds)
+    fig, ax = plt.subplots(ncols=1, nrows=3)
     librosa.display.waveplot(wave_data, sr=sr, ax=ax[0], alpha=1)
-    vline = ax[0].plot([0, 0], [-abs(wave_data[0]), abs(wave_data[0])], color="r", lw=.5)[0]
+    vline = ax[0].plot([0, 0], [-2, 2], color="r", lw=1.5)[0]
     x = list(range(25))
     y_init = [0] * len(x)
     y_init[-1] = 1
 
-    bars = ax[1].bar(x, y_init, .5)
+    bars = ax[1].bar(x, y_init, .5, align="center")
     ax[1].set_xticks(x)
     ax[1].set_ylim(-1,1)
-    interval = 100
-    ani = animation.FuncAnimation(fig, animate, frames=np.arange(0, len(wave_data), int(sr*interval/1000)), interval=interval, blit=False, repeat=True)
 
+    t_bars = ax[2].bar(x, y_init, .5, align="center")
+    ax[2].set_xticks(x)
+    ax[2].set_ylim(-1, 1)
+
+    interval = 100
+    ends = split(right=len(wave_data)/sr)
+    ani = animation.FuncAnimation(fig, animate, frames=len(ends), interval=interval, blit=False, repeat=True)
+    ani.save(save_pth, writer='pillow', fps=10)
     plt.show()
 
     pass
@@ -320,10 +359,12 @@ def animate_real_time_pred(wave_data, sr, preds, labels):
 if __name__ == "__main__":
     # 使用matplotlib展示动画
     # annimation_test()
-    # 以动画的形式展示声波
-    file_path = "../data/train/003bec244.flac"
+    # 以动画的形式展示声波 400b7210c 5f8eecc9e
+    file_path = "../dataproc/species.flac"
     wave_data, sr = librosa.load(file_path)
-    animate_real_time_pred(wave_data, sr, [], [])
+    data_path = "../solution3/species_preds_labelsmodel08.npz"
+    data = np.load(data_path, allow_pickle=True)
+    animate_real_time_pred(wave_data, sr, data['preds'], data["labels"], save_pth=f'realtime_{data_path.split("/")[-1].split(".")[0]}.gif')
     # wave_animation(file_path)
     # bar_animation()
 

@@ -181,15 +181,57 @@ def vggish_melspectrogram(file):
 def vggish_wave_data_mel(data, sr):
     return vggish_input.wavedata_to_log_melspectrogram(data, sr)
 
+
+def extract_species():
+    base_dir = "../data/train/"
+    info = pd.read_csv("../data/train_all.csv")
+    gs_sp = info.groupby("species_id")
+    gs_re = info.groupby("recording_id")
+
+    new_info = []
+    species = []
+
+    sps = random.sample(range(24), 15)
+
+    for sp in sps:
+        v = gs_sp.get_group(sp)
+        tp = v[v['positive'] == 1]
+        index = tp.index.tolist()
+        slected = random.sample(index, 4)
+        for r in slected:
+            item = tp.loc[r]
+            tmin = item['t_min']
+            tmax = item['t_max']
+            data, sr = librosa.load(base_dir+item['recording_id']+'.flac')
+            piece = data[int(sr*tmin):int(sr*tmax)]
+            new_info.append([sp, tmax-tmin])
+            species.append(piece)
+
+    index = list(range(len(species)))
+    np.random.shuffle(index)
+    data = []
+    info = []
+    for e in index:
+        info.append([new_info[e][0], len(data)/sr, len(data)/sr+new_info[e][1]])
+        data.extend(species[e])
+
+    new_info = pd.DataFrame(info, columns=["species_id", "t_min", "t_max"])
+    new_info['positive'] = [1]*len(info)
+    sf.write("./species.flac", data, sr)
+    new_info.to_csv('./species_info.csv', index=False)
+
+
 if __name__ == "__main__":
-    data = vggish_example("../data/train/0a33527e9.flac")
-    data = vggish_melspectrogram("../data/train/0a4f02024.flac")
-    data = np.transpose(data)
-    print(data.shape)
-    print(data)
-    fig, ax = plt.subplots(nrows=1, ncols=1, sharex=True, sharey=True)
-    librosa.display.specshow(data, y_axis="log", x_axis="time", sr=16000, ax=ax)
-    plt.show()
+    extract_species()
+
+    # data = vggish_example("../data/train/0a33527e9.flac")
+    # data = vggish_melspectrogram("../data/train/0a4f02024.flac")
+    # data = np.transpose(data)
+    # print(data.shape)
+    # print(data)
+    # fig, ax = plt.subplots(nrows=1, ncols=1, sharex=True, sharey=True)
+    # librosa.display.specshow(data, y_axis="log", x_axis="time", sr=16000, ax=ax)
+    # plt.show()
 
     # statistic()
 
